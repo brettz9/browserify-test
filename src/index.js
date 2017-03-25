@@ -4,7 +4,7 @@ import errorify from 'errorify'
 import Testem from 'testem'
 import concatStream from 'concat-stream'
 import Server from 'testem/lib/server'
-import { readFileSync as readFile } from 'fs'
+import { readFileSync as readFile, writeFileSync } from 'fs'
 import { join } from 'path'
 
 /**
@@ -73,6 +73,9 @@ export default function ({ files, entries, transform, transforms, plugins, watch
       res.status(500).send(err.stack)
     })
     .pipe(concatStream((buf) => {
+      const file = 'tmp-testing.js'
+      const path = join(__dirname, '../', file) // req.url
+      writeFileSync(path, buf.toString())
       res.status(200).send(`
         <!DOCTYPE html>
         <html>
@@ -81,13 +84,15 @@ export default function ({ files, entries, transform, transforms, plugins, watch
           <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon" />
           <title>Tests</title>
           <style>${mochaCss}</style>
+          <script>${readFile(join(__dirname, '../node_modules/source-map-support/browser-source-map-support.js'))}</script>
+          <script>sourceMapSupport.install()</script>
           <script>${mochaJs}</script>
           <script src="/testem.js"></script>
           <script>mocha.setup('bdd')</script>
         </head>
         <body>
           <div id="mocha"></div>
-          <script>${buf.toString()}</script>
+          <script src="/${file}"></script>
           <script>mocha.run()</script>
         </body>
         </html>
